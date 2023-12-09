@@ -17,6 +17,10 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING,
       allowNull: false,
     },
+    password_hash: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
   });
 
   Voter.associate = function (models) {

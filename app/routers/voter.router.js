@@ -1,29 +1,97 @@
 const express = require("express");
 const router = express.Router();
+const bcrypt = require("bcrypt");
 const BigInt = require("big-integer");
 
 const db = require("../models/index.js");
 const ECC = require("../../ECC.js");
 
-// Create a voter
-router.post("/", async (req, res) => {
+router.post("/login", async (req, res) => {
   try {
-    const { name, age, email } = req.body;
+    const { name, age, email, password } = req.body;
 
     // Validate the request body
-    if (!name || !age || !email) {
+    if (!name || !age || !email || !password) {
       return res
         .status(400)
-        .json({ message: "Name, age, and email are required" });
+        .json({ message: "Name, age, email, password are required" });
     }
 
-    // Create a new voter in the database
-    const newVoter = await db.voter.create({ name, age, email });
+    // check if the email is already in the database
+    let results = await db.voter.findAll({ where: { email: email } });
 
-    res.status(201).json(newVoter);
+    if (results.length > 0) {
+      const validPassword = bcrypt.compareSync(
+        password,
+        results[0].password_hash
+      );
+      if (!validPassword) {
+        return res
+          .status(200)
+          .jsonp({ message: "Your email or password is incorrect" });
+      }
+    } else {
+      return res
+        .status(200)
+        .jsonp({ message: "Your email or password is incorrect" });
+    }
+
+    // save user's data in session memory
+    req.session.voter = {
+      voterId: results[0].id,
+      name: results[0].name,
+    };
+
+    // send session data to client
+    res.status(201).jsonp(req.session.voter);
   } catch (error) {
-    console.error(error);
     res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+//route for signup
+router.post("/signup", async (req, res) => {
+  // get user data from req.body
+  const { email, password, name, age } = req.body;
+
+  // Validate the request body
+  if (!name || !age || !email || !password) {
+    return res
+      .status(400)
+      .json({ message: "Name, age, email and password are required" });
+  }
+
+  // check if the email is already in the database
+  let results = await db.voter.findAll({ where: { email: email } });
+  if (results.length > 0) {
+    return res.status(400).json({ message: "Email already exists" });
+  }
+
+  // Create a new voter in the database
+  const salt = bcrypt.genSaltSync(10);
+  const hash = bcrypt.hashSync(password, salt);
+  const newVoter = await db.voter.create({
+    name,
+    age,
+    email,
+    password_hash: hash,
+  });
+
+  req.session.voter = {
+    id: newVoter.id,
+    name: name,
+  };
+
+  // send session data to client
+  res.status(200).jsonp(req.session.voter);
+});
+
+router.get("/logout", (req, res) => {
+  if (req.session.voter && req.cookies.voterId) {
+    res.clearCookie("voterId");
+    res.status(200).jsonp({ message: "Logout successfully" });
+  } else {
+    res.status(200).jsonp({ message: "You have not logged in" });
   }
 });
 
