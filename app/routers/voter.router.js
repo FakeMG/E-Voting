@@ -51,44 +51,49 @@ router.post("/login", async (req, res) => {
 
 //route for signup
 router.post("/signup", async (req, res) => {
-  // get user data from req.body
-  const { email, password, name, age } = req.body;
+  try {
+    // get user data from req.body
+    const { email, password, name, age } = req.body;
 
-  // Validate the request body
-  if (!name || !age || !email || !password) {
-    return res
-      .status(400)
-      .json({ message: "Name, age, email and password are required" });
+    // Validate the request body
+    if (!name || !age || !email || !password) {
+      return res
+        .status(400)
+        .json({ message: "Name, age, email and password are required" });
+    }
+
+    // check if the email is already in the database
+    let results = await db.voter.findAll({ where: { email: email } });
+    if (results.length > 0) {
+      return res.status(400).json({ message: "Email already exists" });
+    }
+
+    // Create a new voter in the database
+    const salt = bcrypt.genSaltSync(10);
+    const hash = bcrypt.hashSync(password, salt);
+    const newVoter = await db.voter.create({
+      name,
+      age,
+      email,
+      password_hash: hash,
+    });
+
+    req.session.voter = {
+      id: newVoter.id,
+      name: name,
+    };
+
+    // send session data to client
+    res.status(200).jsonp(req.session.voter);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Internal server error" });
   }
-
-  // check if the email is already in the database
-  let results = await db.voter.findAll({ where: { email: email } });
-  if (results.length > 0) {
-    return res.status(400).json({ message: "Email already exists" });
-  }
-
-  // Create a new voter in the database
-  const salt = bcrypt.genSaltSync(10);
-  const hash = bcrypt.hashSync(password, salt);
-  const newVoter = await db.voter.create({
-    name,
-    age,
-    email,
-    password_hash: hash,
-  });
-
-  req.session.voter = {
-    id: newVoter.id,
-    name: name,
-  };
-
-  // send session data to client
-  res.status(200).jsonp(req.session.voter);
 });
 
 router.get("/logout", (req, res) => {
-  if (req.session.voter && req.cookies.voterId) {
-    res.clearCookie("voterId");
+  if (req.session.voter) {
+    req.session.destroy();
     res.status(200).jsonp({ message: "Logout successfully" });
   } else {
     res.status(200).jsonp({ message: "You have not logged in" });
@@ -125,63 +130,68 @@ router.get("/:id/elections", async (req, res) => {
 });
 
 // Vote for a candidate
-router.post("/:id/vote/:electionId", async (req, res) => {
-  const vote = req.body;
+router.post("/vote/:electionId", async (req, res) => {
+  try {
+    const vote = req.body;
 
-  convertJsonToBigInt(vote);
+    convertJsonToBigInt(vote);
 
-  const electionId = req.params.electionId;
-  const election = await db.election.findOne({
-    where: { id: electionId },
-    include: [
-      {
-        model: db.candidate,
-        as: "candidates",
+    const electionId = req.params.electionId;
+    const election = await db.election.findOne({
+      where: { id: electionId },
+      include: [
+        {
+          model: db.candidate,
+          as: "candidates",
+        },
+      ],
+    });
+    const Ms = [];
+    election.candidates.forEach((candidate) => {
+      Ms.push({
+        x: BigInt(candidate.ElectionCandidate.Mx),
+        y: BigInt(candidate.ElectionCandidate.My),
+        isFinite: true,
+      });
+    });
+
+    const serverPublicKey = {
+      a: BigInt(election.a),
+      b: BigInt(election.b),
+      p: BigInt(election.p),
+      q: BigInt(election.order),
+      P: {
+        x: BigInt(election.bigPx),
+        y: BigInt(election.bigPy),
       },
-    ],
-  });
-  const Ms = [];
-  election.candidates.forEach((candidate) => {
-    Ms.push({
-      x: BigInt(candidate.ElectionCandidate.Mx),
-      y: BigInt(candidate.ElectionCandidate.My),
-      isFinite: true,
-    });
-  });
+      Q: {
+        x: BigInt(election.Qx),
+        y: BigInt(election.Qy),
+        isFinite: true,
+      },
+      numberOfCandidate: election.numberOfCandidate,
+      maximumOfVote: election.maximumOfVote,
+      Ms: Ms,
+    };
 
-  const serverPublicKey = {
-    a: BigInt(election.a),
-    b: BigInt(election.b),
-    p: BigInt(election.p),
-    q: BigInt(election.order),
-    P: {
-      x: BigInt(election.bigPx),
-      y: BigInt(election.bigPy),
-    },
-    Q: {
-      x: BigInt(election.Qx),
-      y: BigInt(election.Qy),
-      isFinite: true,
-    },
-    numberOfCandidate: election.numberOfCandidate,
-    maximumOfVote: election.maximumOfVote,
-    Ms: Ms,
-  };
+    if (ECC.verifyVote(vote, serverPublicKey)) {
+      // update the electionVoter table
+      const electionVoter = await db.electionVoter.findOne({
+        where: { electionId: electionId, voterId: req.session.voter.id },
+      });
+      electionVoter.encryptMessAx = vote.encryptMess.A.x.toString();
+      electionVoter.encryptMessAy = vote.encryptMess.A.y.toString();
+      electionVoter.encryptMessBx = vote.encryptMess.B.x.toString();
+      electionVoter.encryptMessBy = vote.encryptMess.B.y.toString();
 
-  if (ECC.verifyVote(vote, serverPublicKey)) {
-    // update the electionVoter table
-    const electionVoter = await db.electionVoter.findOne({
-      where: { electionId: electionId, voterId: req.params.id },
-    });
-    electionVoter.encryptMessAx = vote.encryptMess.A.x.toString();
-    electionVoter.encryptMessAy = vote.encryptMess.A.y.toString();
-    electionVoter.encryptMessBx = vote.encryptMess.B.x.toString();
-    electionVoter.encryptMessBy = vote.encryptMess.B.y.toString();
-
-    await electionVoter.save();
-    res.status(201).json({ message: "Vote successfully" });
-  } else {
-    res.status(400).json({ message: "Can not verify the vote" });
+      await electionVoter.save();
+      res.status(201).json({ message: "Vote successfully" });
+    } else {
+      res.status(400).json({ message: "Can not verify the vote" });
+    }
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Internal server error" });
   }
 });
 
