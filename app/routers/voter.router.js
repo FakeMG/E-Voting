@@ -1,7 +1,9 @@
 const express = require("express");
 const router = express.Router();
+const BigInt = require("big-integer");
 
 const db = require("../models/index.js");
+const ECC = require("../../ECC.js");
 
 // Create a voter
 router.post("/", async (req, res) => {
@@ -51,6 +53,54 @@ router.get("/:id/elections", async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+// Vote for a candidate
+router.post("/:id/vote/:electionId", async (req, res) => {
+  const { vote } = req.body;
+
+  const electionId = req.params.electionId;
+  const election = await db.election.findOne({
+    where: { id: electionId },
+    include: [
+      {
+        model: db.candidate,
+        as: "candidates",
+      },
+    ],
+  });
+  const Ms = [];
+  election.candidates.forEach((candidate) => {
+    Ms.push({
+      x: BigInt(candidate.ElectionCandidate.Mx),
+      y: BigInt(candidate.ElectionCandidate.My),
+      isFinite: true,
+    });
+  });
+
+  const serverPublicKey = {
+    a: BigInt(election.a),
+    b: BigInt(election.b),
+    p: BigInt(election.p),
+    q: BigInt(election.order),
+    P: {
+      x: BigInt(election.bigPx),
+      y: BigInt(election.bigPy),
+    },
+    Q: {
+      x: BigInt(election.Qx),
+      y: BigInt(election.Qy),
+      isFinite: true,
+    },
+    numberOfCandidate: numberOfCandidate,
+    maximumOfVote: maximumOfVote,
+    Ms: Ms,
+  };
+
+  // convert vote data to bigint
+
+  if (ECC.verifyVote(vote, serverPublicKey)) {
   }
 });
 

@@ -21,6 +21,14 @@ module.exports = (sequelize, DataTypes, models) => {
         key: "id",
       },
     },
+    Mx: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    My: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
     votes: {
       type: DataTypes.INTEGER,
       allowNull: false,

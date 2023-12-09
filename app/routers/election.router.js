@@ -1,27 +1,64 @@
 const express = require("express");
 const router = express.Router();
+const BigInt = require("big-integer");
 
 const db = require("../models/index.js");
+const ECC = require("../../ECC.js");
 
 // Create Election
 router.post("/", async (req, res) => {
   const { name, startDate, endDate, candidates, voters } = req.body;
+
+  const a = BigInt("20");
+  const b = BigInt("35");
+  const p = BigInt("1278670465490779485398033124764314055598236800421");
+  const order = BigInt("1278670465490779485398032008834870176885194993279");
+
+  const P = ECC.makeGeneratePoint(p, a, b);
+  const d = ECC.randomPrivateKey(order);
+  const Q = ECC.multiplication(P, d, a, p);
+
+  const numberOfCandidate = candidates.length;
+  const maximumOfVote = BigInt(500);
+  const Ms = ECC.generatePointForCandidates(
+    numberOfCandidate,
+    maximumOfVote,
+    P,
+    a,
+    p,
+    order
+  );
+
+  console.log("Ms", Ms);
+
   const newElection = {
     name,
-    startDate: new Date(startDate), // Convert startDate to Date object
-    endDate: new Date(endDate), // Convert endDate to Date object
+    startDate: new Date(startDate),
+    endDate: new Date(endDate),
     isActived:
       new Date(startDate) <= new Date() && new Date(endDate) >= new Date(),
+    a: a.toString(),
+    b: b.toString(),
+    p: p.toString(),
+    order: order.toString(),
+    bigPx: P.x.toString(),
+    bigPy: P.y.toString(),
+    Qx: Q.x.toString(),
+    Qy: Q.y.toString(),
+    numberOfCandidates: numberOfCandidate,
+    maximumNumberOfVotes: maximumOfVote,
   };
 
+  const candidatesAfterInsertedInDB = [];
+
   try {
-    // Check if candidates are available in the candidate table
-    const existingCandidates = await db.candidate.findAll({
-      id: { $in: candidates },
+    candidates.forEach(async (candidate) => {
+      // Create a new candidate in the database
+      const newCandidate = await db.candidate.create({
+        name: candidate.name,
+      });
+      candidatesAfterInsertedInDB.push(newCandidate);
     });
-    if (existingCandidates.length !== candidates.length) {
-      return res.status(404).send("Candidates not found");
-    }
 
     // Check if voters are available in the voter table
     const votersCheck = await db.voter.findAll({ id: { $in: voters } });
@@ -33,24 +70,28 @@ router.post("/", async (req, res) => {
     const createdElection = await db.election.create(newElection);
 
     // Add candidates to the electionCandidate table
-    candidates.forEach((candidateId) => {
+    candidatesAfterInsertedInDB.forEach((candidate) => {
+      const index = candidatesAfterInsertedInDB.indexOf(candidate);
+
       db.electionCandidate.create({
         electionId: createdElection.id,
-        candidateId: candidateId,
+        candidateId: candidate.id,
+        Mx: Ms[index].x.toString(),
+        My: Ms[index].y.toString(),
       });
     });
 
     // Add voters to the electionVoter table
-    voters.forEach((voterId) => {
+    voters.forEach((voter) => {
       db.electionVoter.create({
         electionId: createdElection.id,
-        voterId: voterId,
+        voterId: voter.id,
       });
     });
 
     res.send({
       election: createdElection,
-      candidates: existingCandidates,
+      candidates: candidatesAfterInsertedInDB,
       voters: votersCheck,
     });
   } catch (error) {

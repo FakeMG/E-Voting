@@ -22,6 +22,46 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
       defaultValue: false,
     },
+    a: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    b: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    p: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    order: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    bigPx: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    bigPy: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    Qx: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    Qy: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    numberOfCandidates: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+    },
+    maximumNumberOfVotes: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+    },
   });
 
   Election.associate = function (models) {
