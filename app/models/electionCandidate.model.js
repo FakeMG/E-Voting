@@ -29,11 +29,6 @@ module.exports = (sequelize, DataTypes, models) => {
       type: DataTypes.STRING,
       allowNull: false,
     },
-    votes: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-      defaultValue: 0,
-    },
   });
 
   return ElectionCandidate;

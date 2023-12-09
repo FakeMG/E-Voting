@@ -46,6 +46,10 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING,
       allowNull: false,
     },
+    d: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
     Qx: {
       type: DataTypes.STRING,
       allowNull: false,

@@ -9,6 +9,7 @@ const ECC = require("../../ECC.js");
 router.post("/", async (req, res) => {
   const { name, startDate, endDate, candidates, voters } = req.body;
 
+  // Set up ECC parameters
   const a = BigInt("20");
   const b = BigInt("35");
   const p = BigInt("1278670465490779485398033124764314055598236800421");
@@ -41,28 +42,41 @@ router.post("/", async (req, res) => {
     order: order.toString(),
     bigPx: P.x.toString(),
     bigPy: P.y.toString(),
+    d: d.toString(),
     Qx: Q.x.toString(),
     Qy: Q.y.toString(),
     numberOfCandidate: numberOfCandidate,
     maximumOfVote: maximumOfVote,
   };
-
-  const candidatesAfterInsertedInDB = [];
+  // ---------------------------------------------------------
 
   try {
+    // Check if all voters are available in the voter table
+    let missingVoters = [];
+    for (const voter of voters) {
+      const voterInDB = await db.voter.findOne({
+        where: { id: voter.id },
+      });
+      if (!voterInDB) {
+        missingVoters.push(voter.id);
+      }
+    }
+    if (missingVoters.length > 0) {
+      return res
+        .status(404)
+        .send({ message: `Voters ${missingVoters} not found` });
+    }
+    //------------------------------------------------------------
+
+    // Create a new candidate in the database
+    const candidatesAfterInsertedInDB = [];
     candidates.forEach(async (candidate) => {
-      // Create a new candidate in the database
       const newCandidate = await db.candidate.create({
         name: candidate.name,
       });
       candidatesAfterInsertedInDB.push(newCandidate);
     });
-
-    // Check if voters are available in the voter table
-    const votersCheck = await db.voter.findAll({ id: { $in: voters } });
-    if (votersCheck.length !== voters.length) {
-      return res.status(404).send("Voters not found");
-    }
+    //------------------------------------------------------------
 
     // Create a new election
     const createdElection = await db.election.create(newElection);
@@ -70,7 +84,6 @@ router.post("/", async (req, res) => {
     // Add candidates to the electionCandidate table
     candidatesAfterInsertedInDB.forEach((candidate) => {
       const index = candidatesAfterInsertedInDB.indexOf(candidate);
-
       db.electionCandidate.create({
         electionId: createdElection.id,
         candidateId: candidate.id,
@@ -90,7 +103,7 @@ router.post("/", async (req, res) => {
     res.send({
       election: createdElection,
       candidates: candidatesAfterInsertedInDB,
-      voters: votersCheck,
+      voters: voters,
     });
   } catch (error) {
     console.error(error);
@@ -152,7 +165,48 @@ router.get("/:id/results", async (req, res) => {
   const electionId = req.params.id;
 
   try {
-    const election = await db.election.findOne({
+    // Get the votes ------------------------------------------
+    const electionWithVoters = await db.election.findOne({
+      where: { id: electionId },
+      include: [
+        {
+          model: db.voter,
+          as: "voters",
+        },
+      ],
+    });
+    if (!electionWithVoters) {
+      return res.status(404).send("Election not found");
+    }
+    // get all the encryptMess value of the electionVoter table
+    const votes = [];
+    electionWithVoters.voters.forEach((voter) => {
+      if (voter.ElectionVoter.encryptMessAx === "") {
+        return;
+      }
+      const vote = {
+        encryptMess: {
+          A: {
+            x: BigInt(voter.ElectionVoter.Ax),
+            y: BigInt(voter.ElectionVoter.Ay),
+            isFinite: true,
+          },
+          B: {
+            x: BigInt(voter.ElectionVoter.Bx),
+            y: BigInt(voter.ElectionVoter.By),
+            isFinite: true,
+          },
+        },
+      };
+      votes.push(vote);
+    });
+    if (votes.length === 0) {
+      return res.status(404).send({ message: "No votes found" });
+    }
+    // ---------------------------------------------------------
+
+    // Get server full key-------------------------------------
+    const electionWithCandidates = await db.election.findOne({
       where: { id: electionId },
       include: [
         {
@@ -161,23 +215,40 @@ router.get("/:id/results", async (req, res) => {
         },
       ],
     });
-    if (!election) {
-      return res.status(404).send("Election not found");
-    }
-
-    const results = [];
-    election.candidates.forEach((candidate) => {
-      results.push({
-        candidateId: candidate.id,
-        candidateName: candidate.name,
-        totalVotes: candidate.ElectionCandidate.votes,
+    const Ms = [];
+    electionWithCandidates.candidates.forEach((candidate) => {
+      Ms.push({
+        x: BigInt(candidate.ElectionCandidate.Mx),
+        y: BigInt(candidate.ElectionCandidate.My),
+        isFinite: true,
       });
     });
 
-    res.status(200).json(results);
+    const serverFullKey = {
+      a: BigInt(electionWithCandidates.a),
+      b: BigInt(electionWithCandidates.b),
+      p: BigInt(electionWithCandidates.p),
+      q: BigInt(electionWithCandidates.order),
+      P: {
+        x: BigInt(electionWithCandidates.bigPx),
+        y: BigInt(electionWithCandidates.bigPy),
+      },
+      Q: {
+        x: BigInt(electionWithCandidates.Qx),
+        y: BigInt(electionWithCandidates.Qy),
+        isFinite: true,
+      },
+      numberOfCandidate: electionWithCandidates.numberOfCandidate,
+      maximumOfVote: electionWithCandidates.maximumOfVote,
+      Ms: Ms,
+      d: BigInt(electionWithCandidates.d),
+    };
+    // ---------------------------------------------------------
+
+    res.status(200).json(ECC.openVote(votes, serverFullKey));
   } catch (error) {
     console.error(error);
-    res.status(500).send("Internal Server Error");
+    res.status(500).send({ message: "Internal Server Error" });
   }
 });
 

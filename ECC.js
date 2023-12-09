@@ -439,7 +439,6 @@ function openVote(votes, serverFullKey) {
     sumB = addition(sumB, votes[i].encryptMess.B, a, p);
   }
   let decryptS = addition(sumB, opposite(multiplication(sumA, d, a, p)), a, p);
-  //console.log("decryptS: " + decryptS.x.toString() + " " + decryptS.y.toString())
   let result = solve(decryptS, Ms, votes, serverFullKey);
   return result;
 }
