@@ -132,6 +132,17 @@ router.get("/:id/elections", async (req, res) => {
 // Vote for a candidate
 router.post("/vote/:electionId", async (req, res) => {
   try {
+    // check if the encryptMessAx in the electionVoter table is 0
+    const electionVoter = await db.electionVoter.findOne({
+      where: {
+        electionId: req.params.electionId,
+        voterId: req.session.voter.id,
+      },
+    });
+    if (electionVoter.encryptMessAx !== "") {
+      return res.status(400).json({ message: "You have already voted" });
+    }
+
     const vote = req.body;
 
     convertJsonToBigInt(vote);
@@ -176,9 +187,6 @@ router.post("/vote/:electionId", async (req, res) => {
 
     if (ECC.verifyVote(vote, serverPublicKey)) {
       // update the electionVoter table
-      const electionVoter = await db.electionVoter.findOne({
-        where: { electionId: electionId, voterId: req.session.voter.id },
-      });
       electionVoter.encryptMessAx = vote.encryptMess.A.x.toString();
       electionVoter.encryptMessAy = vote.encryptMess.A.y.toString();
       electionVoter.encryptMessBx = vote.encryptMess.B.x.toString();

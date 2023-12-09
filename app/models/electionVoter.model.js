@@ -24,22 +24,22 @@ module.exports = (sequelize, DataTypes, models) => {
     encryptMessAx: {
       type: DataTypes.STRING,
       allowNull: false,
-      defaultValue: "0",
+      defaultValue: "",
     },
     encryptMessAy: {
       type: DataTypes.STRING,
       allowNull: false,
-      defaultValue: "0",
+      defaultValue: "",
     },
     encryptMessBx: {
       type: DataTypes.STRING,
       allowNull: false,
-      defaultValue: "0",
+      defaultValue: "",
     },
     encryptMessBy: {
       type: DataTypes.STRING,
       allowNull: false,
-      defaultValue: "0",
+      defaultValue: "",
     },
     // other fields of the joined table
   });
