@@ -58,7 +58,9 @@ router.get("/:id/elections", async (req, res) => {
 
 // Vote for a candidate
 router.post("/:id/vote/:electionId", async (req, res) => {
-  const { vote } = req.body;
+  const vote = req.body;
+
+  convertJsonToBigInt(vote);
 
   const electionId = req.params.electionId;
   const election = await db.election.findOne({
@@ -93,15 +95,43 @@ router.post("/:id/vote/:electionId", async (req, res) => {
       y: BigInt(election.Qy),
       isFinite: true,
     },
-    numberOfCandidate: numberOfCandidate,
-    maximumOfVote: maximumOfVote,
+    numberOfCandidate: election.numberOfCandidate,
+    maximumOfVote: election.maximumOfVote,
     Ms: Ms,
   };
 
-  // convert vote data to bigint
-
   if (ECC.verifyVote(vote, serverPublicKey)) {
+    // update the electionVoter table
+    const electionVoter = await db.electionVoter.findOne({
+      where: { electionId: electionId, voterId: req.params.id },
+    });
+    electionVoter.encryptMessAx = vote.encryptMess.A.x.toString();
+    electionVoter.encryptMessAy = vote.encryptMess.A.y.toString();
+    electionVoter.encryptMessBx = vote.encryptMess.B.x.toString();
+    electionVoter.encryptMessBy = vote.encryptMess.B.y.toString();
+
+    await electionVoter.save();
+    res.status(201).json({ message: "Vote successfully" });
+  } else {
+    res.status(400).json({ message: "Can not verify the vote" });
   }
 });
+
+function convertJsonToBigInt(json) {
+  const convertToBigInteger = (value) => BigInt(value);
+
+  const recursiveConvert = (obj) => {
+    for (const key in obj) {
+      if (typeof obj[key] === "object") {
+        recursiveConvert(obj[key]);
+      } else if (typeof obj[key] === "string") {
+        obj[key] = convertToBigInteger(obj[key]);
+      }
+    }
+  };
+
+  recursiveConvert(json);
+  return json;
+}
 
 module.exports = router;

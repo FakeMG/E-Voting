@@ -29,8 +29,6 @@ router.post("/", async (req, res) => {
     order
   );
 
-  console.log("Ms", Ms);
-
   const newElection = {
     name,
     startDate: new Date(startDate),
@@ -45,8 +43,8 @@ router.post("/", async (req, res) => {
     bigPy: P.y.toString(),
     Qx: Q.x.toString(),
     Qy: Q.y.toString(),
-    numberOfCandidates: numberOfCandidate,
-    maximumNumberOfVotes: maximumOfVote,
+    numberOfCandidate: numberOfCandidate,
+    maximumOfVote: maximumOfVote,
   };
 
   const candidatesAfterInsertedInDB = [];

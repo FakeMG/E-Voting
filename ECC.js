@@ -280,10 +280,10 @@ function newVote(candidate, serverPublicKey) {
   const Mcp = serverPublicKey.Ms[candidate];
   const a = serverPublicKey.a;
   const p = serverPublicKey.p;
-  const r = getRandomRelativePrimeValue(order);
+  const r = getRandomRelativePrimeValue(serverPublicKey.q);
   const Cp = {
-    A: multiplication(P, r, a, p),
-    B: addition(Mcp, multiplication(Q, r, a, p), a, p),
+    A: multiplication(serverPublicKey.P, r, a, p),
+    B: addition(Mcp, multiplication(serverPublicKey.Q, r, a, p), a, p),
   };
   //console.log(Cp)
   const CpSign = {
@@ -445,86 +445,86 @@ function openVote(votes, serverFullKey) {
 }
 
 // set up (lưu vào db election)
-const a = BigInt("20");
-const b = BigInt("35");
-const p = BigInt("1278670465490779485398033124764314055598236800421");
-const order = BigInt("1278670465490779485398032008834870176885194993279");
-// tinh toan
-const P = makeGeneratePoint(p, a, b);
-const d = randomPrivateKey(order);
-const Q = multiplication(P, d, a, p);
+// const a = BigInt("20");
+// const b = BigInt("35");
+// const p = BigInt("1278670465490779485398033124764314055598236800421");
+// const order = BigInt("1278670465490779485398032008834870176885194993279");
+// // tinh toan
+// const P = makeGeneratePoint(p, a, b);
+// const d = randomPrivateKey(order);
+// const Q = multiplication(P, d, a, p);
 
-// them cot vao db election
-const numberOfCandidate = 10;
+// // them cot vao db election
+// const numberOfCandidate = 10;
 
-// random
-const maximumOfVote = BigInt(500);
+// // random
+// const maximumOfVote = BigInt(500);
 
-// moi candidate co 1 diem tren elliptic curve
-// luu vao db electionCandidate
-const Ms = generatePointForCandidates(
-  numberOfCandidate,
-  maximumOfVote,
-  P,
-  a,
-  p,
-  order
-);
+// // moi candidate co 1 diem tren elliptic curve
+// // luu vao db electionCandidate
+// const Ms = generatePointForCandidates(
+//   numberOfCandidate,
+//   maximumOfVote,
+//   P,
+//   a,
+//   p,
+//   order
+// );
 
-// luu vao election
-const serverPublicKey = {
-  a: a,
-  b: b,
-  p: p,
-  q: order,
-  P: P,
-  Q: Q,
-  numberOfCandidate: numberOfCandidate,
-  maximumOfVote: maximumOfVote,
-  Ms: Ms,
-};
+// // luu vao election
+// const serverPublicKey = {
+//   a: a,
+//   b: b,
+//   p: p,
+//   q: order,
+//   P: P,
+//   Q: Q,
+//   numberOfCandidate: numberOfCandidate,
+//   maximumOfVote: maximumOfVote,
+//   Ms: Ms,
+// };
 
-let votes = [];
+// let votes = [];
 
-const serverFullKey = {
-  a: a,
-  b: b,
-  p: p,
-  q: order,
-  P: P,
-  Q: Q,
-  numberOfCandidate: numberOfCandidate,
-  maximumOfVote: maximumOfVote,
-  Ms: Ms,
-  d: d,
-};
+// const serverFullKey = {
+//   a: a,
+//   b: b,
+//   p: p,
+//   q: order,
+//   P: P,
+//   Q: Q,
+//   numberOfCandidate: numberOfCandidate,
+//   maximumOfVote: maximumOfVote,
+//   Ms: Ms,
+//   d: d,
+// };
 
-// Voting
+// // Voting
 
-// voter choice
-// fe se gui vote cho server
-// moi voter se co 1 vote
-// them toa do A va B cua encryptMess cua vote vao db electionVoter sau khi verify
-let vote1 = newVote(1, serverPublicKey);
-let vote2 = newVote(1, serverPublicKey);
-let vote3 = newVote(2, serverPublicKey);
-let vote4 = newVote(3, serverPublicKey);
-let vote5 = newVote(8, serverPublicKey);
-if (verifyVote(vote1, serverPublicKey)) {
-  votes.push(vote1);
-}
-if (verifyVote(vote2, serverPublicKey)) {
-  votes.push(vote2);
-}
-if (verifyVote(vote3, serverPublicKey)) {
-  votes.push(vote3);
-}
-if (verifyVote(vote4, serverPublicKey)) {
-  votes.push(vote4);
-}
-if (verifyVote(vote5, serverPublicKey)) {
-  votes.push(vote5);
-}
+// // voter choice
+// // fe se gui vote cho server
+// // moi voter se co 1 vote
+// // them toa do A va B cua encryptMess cua vote vao db electionVoter sau khi verify
+// let vote1 = newVote(1, serverPublicKey);
+// let vote2 = newVote(1, serverPublicKey);
+// let vote3 = newVote(2, serverPublicKey);
+// let vote4 = newVote(3, serverPublicKey);
+// let vote5 = newVote(8, serverPublicKey);
+// if (verifyVote(vote1, serverPublicKey)) {
+//   votes.push(vote1);
+// }
+// if (verifyVote(vote2, serverPublicKey)) {
+//   votes.push(vote2);
+// }
+// if (verifyVote(vote3, serverPublicKey)) {
+//   votes.push(vote3);
+// }
+// if (verifyVote(vote4, serverPublicKey)) {
+//   votes.push(vote4);
+// }
+// if (verifyVote(vote5, serverPublicKey)) {
+//   votes.push(vote5);
+// }
 
 // khi dong election, tinh toan ket qua
 // console.log(openVote(votes, serverFullKey));

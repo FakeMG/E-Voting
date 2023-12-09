@@ -54,11 +54,11 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING,
       allowNull: false,
     },
-    numberOfCandidates: {
+    numberOfCandidate: {
       type: DataTypes.INTEGER,
       allowNull: false,
     },
-    maximumNumberOfVotes: {
+    maximumOfVote: {
       type: DataTypes.INTEGER,
       allowNull: false,
     },

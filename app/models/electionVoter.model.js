@@ -21,6 +21,26 @@ module.exports = (sequelize, DataTypes, models) => {
         },
       },
     },
+    encryptMessAx: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      defaultValue: "0",
+    },
+    encryptMessAy: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      defaultValue: "0",
+    },
+    encryptMessBx: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      defaultValue: "0",
+    },
+    encryptMessBy: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      defaultValue: "0",
+    },
     // other fields of the joined table
   });
   return ElectionVoter;
