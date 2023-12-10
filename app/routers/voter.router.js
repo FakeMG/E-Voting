@@ -8,13 +8,13 @@ const ECC = require("../../ECC.js");
 
 router.post("/login", async (req, res) => {
   try {
-    const { name, age, email, password } = req.body;
+    const { email, password } = req.body;
 
     // Validate the request body
-    if (!name || !age || !email || !password) {
+    if (!email || !password) {
       return res
         .status(400)
-        .json({ message: "Name, age, email, password are required" });
+        .json({ message: "Email and password are required" });
     }
 
     // check if the email is already in the database
