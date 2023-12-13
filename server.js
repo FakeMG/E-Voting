@@ -2,10 +2,16 @@ const express = require("express");
 const app = express();
 const cookieParser = require("cookie-parser");
 const session = require("express-session");
+const cors = require("cors")
+
+var corsOptions = {
+  origin: "*",
+  method: ['GET', 'POST', 'PUT', 'DELETE']
+}
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
+app.use(cors(corsOptions))
 // initialize express-session to allow us track the logged-in user across sessions.
 app.use(
   session({
