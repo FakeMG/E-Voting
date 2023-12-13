@@ -141,7 +141,7 @@ router.get("/", async (req, res) => {
 });
 
 // Get candidates of an election
-router.get("/:id/candidates", async (req, res) => {
+router.get("/:id", async (req, res) => {
   const electionId = req.params.id;
 
   try {
@@ -246,9 +246,9 @@ router.put("/:id/close", async (req, res) => {
       };
       votes.push(vote);
     });
-    // if (votes.length === 0) {
-    //   return res.status(404).send({ message: "No votes found" });
-    // }
+    if (votes.length === 0) {
+      return res.status(404).send({ message: "No votes found" });
+    }
     //---------------------------------------------------------
     
     // Get server full key-------------------------------------
@@ -287,21 +287,21 @@ router.put("/:id/close", async (req, res) => {
       Ms: Ms,
       d: BigInt(election.dataValues.d),
     };
-    let votess = [];
-    let vote2 = ECC.newVote(1, serverFullKey);
-    let vote3 = ECC.newVote(0, serverFullKey);
+    // let votess = [];
+    // let vote2 = ECC.newVote(1, serverFullKey);
+    // let vote3 = ECC.newVote(0, serverFullKey);
     // console.log(vote1.encryptMess.A.x.toString())
     // console.log(vote1.encryptMess.A.y.toString())
     // console.log(vote1.encryptMess.B.x.toString())
     // console.log(vote1.encryptMess.B.y.toString());
-    console.log(vote2.encryptMess.A.x.toString())
-    console.log(vote2.encryptMess.A.y.toString());
-    console.log(vote2.encryptMess.B.x.toString())
-    console.log(vote2.encryptMess.B.y.toString()); 
-    console.log(vote3.encryptMess.A.x.toString())
-    console.log(vote3.encryptMess.A.y.toString());
-    console.log(vote3.encryptMess.B.x.toString())
-    console.log(vote3.encryptMess.B.y.toString());
+    // console.log(vote2.encryptMess.A.x.toString())
+    // console.log(vote2.encryptMess.A.y.toString());
+    // console.log(vote2.encryptMess.B.x.toString())
+    // console.log(vote2.encryptMess.B.y.toString()); 
+    // console.log(vote3.encryptMess.A.x.toString())
+    // console.log(vote3.encryptMess.A.y.toString());
+    // console.log(vote3.encryptMess.B.x.toString())
+    // console.log(vote3.encryptMess.B.y.toString());
     // votess.push(vote1);
     // votess.push(vote2);
     // votess.push(vote3);
@@ -320,16 +320,16 @@ router.put("/:id/close", async (req, res) => {
     if (resultVoting === null) {
       return res.status(500).send({ message: "Unable calculate numberOfVote" }); 
     }
-    // for (let i = 0; i < candidates.length; i++) {
-    //   let result = await db.candidate.update({numberOfVote: resultVoting[i]},{where: {electionId: electionId, number: i}})
-    //   if (!result) {
-    //     return res.status(500).send({ message: "Unable update numberOfVote" });
-    //   }
-    // }
-    // let updateElection = await db.election.update({ isActived: false}, { where: { id: electionId } })
-    // if (!updateElection) {
-    //   return res.status(500).send({ message: "Unable update state of election" });
-    // }
+    for (let i = 0; i < candidates.length; i++) {
+      let result = await db.candidate.update({numberOfVote: resultVoting[i]},{where: {electionId: electionId, number: i}})
+      if (!result) {
+        return res.status(500).send({ message: "Unable update numberOfVote" });
+      }
+    }
+    let updateElection = await db.election.update({ isActived: false}, { where: { id: electionId } })
+    if (!updateElection) {
+      return res.status(500).send({ message: "Unable update state of election" });
+    }
     const candidatesAfterUpdate = await db.candidate.findAll({
       where: { electionId: electionId },
     })
