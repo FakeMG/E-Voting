@@ -12,13 +12,13 @@ module.exports = (sequelize, DataTypes, models) => {
         model: models.election,
         key: "id",
       },
-      voterId: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-        references: {
-          model: models.voter,
-          key: "id",
-        },
+    },
+    voterId: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      references: {
+        model: models.voter,
+        key: "id",
       },
     },
     encryptMessAx: {
