@@ -137,7 +137,7 @@ function multiplication(m, d, a, p) {
   var dBinary = d.toString(2);
   //console.log(dBinary);
   var multi = m;
-  for (i = 1; i < dBinary.length; i++) {
+  for (let i = 1; i < dBinary.length; i++) {
     multi = addition(multi, multi, a, p);
     if (!multi.isFinite) {
       console.log("finite roi");

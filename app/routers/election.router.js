@@ -143,9 +143,21 @@ router.get("/", async (req, res) => {
 // Get candidates of an election
 router.get("/:id", async (req, res) => {
   const electionId = req.params.id;
-
+  if (!req.session.voter) {
+    return res.status(400).send("Login again");
+  }
+  const voterId = req.session.voter.voterId;
+ 
   try {
-    const election = await db.election.findOne({where: {id: electionId}});
+    const electionQuery = await db.election.findAll({where: {id: electionId}, 
+      include: [{
+        model: db.voter,
+        as: "voters", // Specify the alias for the association
+        where: { id: voterId },
+      }]
+    ,})
+    
+    const election = electionQuery[0]
     if (!election) {
       return res.status(400).send("Election not found");
     }
@@ -190,8 +202,12 @@ router.get("/:id", async (req, res) => {
     delete election.dataValues.Qy;
     delete election.dataValues.createdAt;
     delete election.dataValues.updatedAt;
+    election.dataValues.isVoted = true;
+    if (election.dataValues.voters[0].ElectionVoter.encryptMessAx === "") {
+      election.dataValues.isVoted = false;
+    }
+    delete election.dataValues.voters;
     for (let candidate of candidates) {
-      delete candidate.dataValues.number;
       delete candidate.dataValues.Mx;
       delete candidate.dataValues.My;
       delete candidate.dataValues.createdAt;
