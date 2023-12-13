@@ -58,7 +58,6 @@ router.post("/login", async (req, res) => {
     // save user's data in session memory
     req.session.voter = {
       voterId: results[0].id,
-      name: results[0].name,
     };
 
     // send session data to client
@@ -172,7 +171,7 @@ router.post("/vote/:electionId", async (req, res) => {
     const electionVoter = await db.electionVoter.findOne({
       where: {
         electionId: req.params.electionId,
-        voterId: req.session.voter.id,
+        voterId: req.session.voter.voterId,
       },
     });
     if (electionVoter.encryptMessAx !== "") {
@@ -184,24 +183,22 @@ router.post("/vote/:electionId", async (req, res) => {
     convertJsonToBigInt(vote);
 
     const electionId = req.params.electionId;
-    const election = await db.election.findOne({
-      where: { id: electionId },
-      include: [
-        {
-          model: db.candidate,
-          as: "candidates",
-        },
-      ],
-    });
-    const Ms = [];
-    election.candidates.forEach((candidate) => {
-      Ms.push({
-        x: BigInt(candidate.ElectionCandidate.Mx),
-        y: BigInt(candidate.ElectionCandidate.My),
-        isFinite: true,
-      });
-    });
-
+    const election = await db.election.findOne({where: {id: electionId}});
+    if (!election) {
+      return res.status(400).send("Election not found");
+    }
+    const candidates = await db.candidate.findAll({
+      where: { electionId: electionId },
+    })
+    let Ms = [];
+    for (let i = 0; i < candidates.length; i++) {
+      for (let j = 0; j < candidates.length; j++) {
+        if (candidates[j].dataValues.number === i) {
+          Ms.push({x: BigInt(candidates[j].dataValues.Mx), y: BigInt(candidates[j].dataValues.My), isFinite: true})
+        }
+      } 
+    }
+    
     const serverPublicKey = {
       a: BigInt(election.a),
       b: BigInt(election.b),

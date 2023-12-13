@@ -223,31 +223,32 @@ router.put("/:id/close", async (req, res) => {
     if (!electionWithVoters) {
       return res.status(404).send("Election not found");
     }
+    //console.log(electionWithVoters.dataValues.voters[4].ElectionVoter)
     // get all the encryptMess value of the electionVoter table
     const votes = [];
-    electionWithVoters.voters.forEach((voter) => {
-      if (voter.ElectionVoter.encryptMessAx === "") {
+    electionWithVoters.dataValues.voters.forEach((voter) => {
+      if (voter.ElectionVoter.dataValues.encryptMessAx === "") {
         return;
       }
       const vote = {
         encryptMess: {
           A: {
-            x: BigInt(voter.ElectionVoter.Ax),
-            y: BigInt(voter.ElectionVoter.Ay),
+            x: BigInt(voter.ElectionVoter.dataValues.encryptMessAx),
+            y: BigInt(voter.ElectionVoter.dataValues.encryptMessAy),
             isFinite: true,
           },
           B: {
-            x: BigInt(voter.ElectionVoter.Bx),
-            y: BigInt(voter.ElectionVoter.By),
+            x: BigInt(voter.ElectionVoter.dataValues.encryptMessBx),
+            y: BigInt(voter.ElectionVoter.dataValues.encryptMessBy),
             isFinite: true,
           },
         },
       };
       votes.push(vote);
     });
-    if (votes.length === 0) {
-      return res.status(404).send({ message: "No votes found" });
-    }
+    // if (votes.length === 0) {
+    //   return res.status(404).send({ message: "No votes found" });
+    // }
     //---------------------------------------------------------
     
     // Get server full key-------------------------------------
@@ -286,37 +287,49 @@ router.put("/:id/close", async (req, res) => {
       Ms: Ms,
       d: BigInt(election.dataValues.d),
     };
-    // let votes = [];
-    // let vote1 = ECC.newVote(1, serverFullKey);
-    // let vote2 = ECC.newVote(1, serverFullKey);
-    // let vote3 = ECC.newVote(0, serverFullKey);
+    let votess = [];
+    let vote2 = ECC.newVote(1, serverFullKey);
+    let vote3 = ECC.newVote(0, serverFullKey);
     // console.log(vote1.encryptMess.A.x.toString())
     // console.log(vote1.encryptMess.A.y.toString())
     // console.log(vote1.encryptMess.B.x.toString())
     // console.log(vote1.encryptMess.B.y.toString());
-    // console.log(vote2.encryptMess.A.x.toString())
-    // console.log(vote2.encryptMess.A.y.toString());
-    // console.log(vote2.encryptMess.B.x.toString())
-    // console.log(vote2.encryptMess.B.y.toString()); 
-    // console.log(vote3.encryptMess.A.x.toString())
-    // console.log(vote3.encryptMess.A.y.toString());
-    // console.log(vote3.encryptMess.B.x.toString())
-    // console.log(vote3.encryptMess.B.y.toString());
-    // votes.push(vote1);
-    // votes.push(vote2);
-    // votes.push(vote3);
+    console.log(vote2.encryptMess.A.x.toString())
+    console.log(vote2.encryptMess.A.y.toString());
+    console.log(vote2.encryptMess.B.x.toString())
+    console.log(vote2.encryptMess.B.y.toString()); 
+    console.log(vote3.encryptMess.A.x.toString())
+    console.log(vote3.encryptMess.A.y.toString());
+    console.log(vote3.encryptMess.B.x.toString())
+    console.log(vote3.encryptMess.B.y.toString());
+    // votess.push(vote1);
+    // votess.push(vote2);
+    // votess.push(vote3);
+
     // ---------------------------------------------------------
+    // for (let v of votess) {
+    //   console.log(v.encryptMess.A.x.toString())
+    //   console.log(v.encryptMess.A.y.toString())
+    //   console.log(v.encryptMess.B.x.toString())
+    //   console.log(v.encryptMess.B.y.toString());
+    // }
+    // console.log(votes)
+    // console.log(votess)
+
     let resultVoting = ECC.openVote(votes, serverFullKey)
-    for (let i = 0; i < candidates.length; i++) {
-      let result = await db.candidate.update({numberOfVote: resultVoting[i]},{where: {electionId: electionId, number: i}})
-      if (!result) {
-        return res.status(500).send({ message: "Unable update numberOfVote" });
-      }
+    if (resultVoting === null) {
+      return res.status(500).send({ message: "Unable calculate numberOfVote" }); 
     }
-    let updateElection = await db.election.update({ isActived: false}, { where: { id: electionId } })
-    if (!updateElection) {
-      return res.status(500).send({ message: "Unable update state of election" });
-    }
+    // for (let i = 0; i < candidates.length; i++) {
+    //   let result = await db.candidate.update({numberOfVote: resultVoting[i]},{where: {electionId: electionId, number: i}})
+    //   if (!result) {
+    //     return res.status(500).send({ message: "Unable update numberOfVote" });
+    //   }
+    // }
+    // let updateElection = await db.election.update({ isActived: false}, { where: { id: electionId } })
+    // if (!updateElection) {
+    //   return res.status(500).send({ message: "Unable update state of election" });
+    // }
     const candidatesAfterUpdate = await db.candidate.findAll({
       where: { electionId: electionId },
     })
