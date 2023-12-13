@@ -1,6 +1,6 @@
 const { Sequelize, DataTypes } = require("sequelize");
 // tao db
-const sequelize = new Sequelize("e-voting", "root", "pass", {
+const sequelize = new Sequelize("voting", "root", "1234", {
   host: "localhost",
   dialect: "mysql",
   define: {
@@ -16,11 +16,11 @@ db.sequelize = sequelize;
 db.voter = require("./voter.model.js")(sequelize, DataTypes);
 db.candidate = require("./candidate.model.js")(sequelize, DataTypes);
 db.election = require("./election.model.js")(sequelize, DataTypes);
-db.electionCandidate = require("./electionCandidate.model.js")(
-  sequelize,
-  DataTypes,
-  db
-);
+// db.electionCandidate = require("./electionCandidate.model.js")(
+//   sequelize,
+//   DataTypes,
+//   db
+// );
 
 db.electionVoter = require("./electionVoter.model.js")(
   sequelize,

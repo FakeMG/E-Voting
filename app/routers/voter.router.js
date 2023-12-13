@@ -6,6 +6,24 @@ const BigInt = require("big-integer");
 const db = require("../models/index.js");
 const ECC = require("../../ECC.js");
 
+
+router.post("/init", async (req, res) => {
+  try {
+    // add default voter
+    let voters = [];
+    for (let i = 1; i <= 50; i++) {
+      const salt = bcrypt.genSaltSync(10);
+      const hash = bcrypt.hashSync("1", salt);
+      voters.push({email: "user" + i.toString() + "@gmail.com", password_hash: hash})
+    }
+    const voterData = await db.voter.bulkCreate(voters)
+    return res.status(200).send("ok")
+  } catch (error) {
+    console.error(error);
+    return res.status(500).send("Internal Server Error");
+  }
+      
+})
 router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -19,20 +37,21 @@ router.post("/login", async (req, res) => {
 
     // check if the email is already in the database
     let results = await db.voter.findAll({ where: { email: email } });
-
+    //console.log(results)
     if (results.length > 0) {
       const validPassword = bcrypt.compareSync(
         password,
         results[0].password_hash
       );
+      console.log(validPassword);
       if (!validPassword) {
         return res
-          .status(200)
+          .status(400)
           .jsonp({ message: "Your email or password is incorrect" });
       }
     } else {
       return res
-        .status(200)
+        .status(400)
         .jsonp({ message: "Your email or password is incorrect" });
     }
 
@@ -43,60 +62,60 @@ router.post("/login", async (req, res) => {
     };
 
     // send session data to client
-    res.status(201).jsonp(req.session.voter);
+    return res.status(201).jsonp(req.session.voter);
   } catch (error) {
-    res.status(500).json({ message: "Internal server error" });
+    return res.status(500).json({ message: "Internal server error" });
   }
 });
 
-//route for signup
-router.post("/signup", async (req, res) => {
-  try {
-    // get user data from req.body
-    const { email, password, name, age } = req.body;
+// //route for signup
+// router.post("/signup", async (req, res) => {
+//   try {
+//     // get user data from req.body
+//     const { email, password, name, age } = req.body;
 
-    // Validate the request body
-    if (!name || !age || !email || !password) {
-      return res
-        .status(400)
-        .json({ message: "Name, age, email and password are required" });
-    }
+//     // Validate the request body
+//     if (!name || !age || !email || !password) {
+//       return res
+//         .status(400)
+//         .json({ message: "Name, age, email and password are required" });
+//     }
 
-    // check if the email is already in the database
-    let results = await db.voter.findAll({ where: { email: email } });
-    if (results.length > 0) {
-      return res.status(400).json({ message: "Email already exists" });
-    }
+//     // check if the email is already in the database
+//     let results = await db.voter.findAll({ where: { email: email } });
+//     if (results.length > 0) {
+//       return res.status(400).json({ message: "Email already exists" });
+//     }
 
-    // Create a new voter in the database
-    const salt = bcrypt.genSaltSync(10);
-    const hash = bcrypt.hashSync(password, salt);
-    const newVoter = await db.voter.create({
-      name,
-      age,
-      email,
-      password_hash: hash,
-    });
+//     // Create a new voter in the database
+//     const salt = bcrypt.genSaltSync(10);
+//     const hash = bcrypt.hashSync(password, salt);
+//     const newVoter = await db.voter.create({
+//       name,
+//       age,
+//       email,
+//       password_hash: hash,
+//     });
 
-    req.session.voter = {
-      id: newVoter.id,
-      name: name,
-    };
+//     req.session.voter = {
+//       id: newVoter.id,
+//       name: name,
+//     };
 
-    // send session data to client
-    res.status(200).jsonp(req.session.voter);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Internal server error" });
-  }
-});
+//     // send session data to client
+//     res.status(200).jsonp(req.session.voter);
+//   } catch (error) {
+//     console.error(error);
+//     res.status(500).json({ message: "Internal server error" });
+//   }
+// });
 
 router.get("/logout", (req, res) => {
   if (req.session.voter) {
     req.session.destroy();
-    res.status(200).jsonp({ message: "Logout successfully" });
+    return res.status(200).jsonp({ message: "Logout successfully" });
   } else {
-    res.status(200).jsonp({ message: "You have not logged in" });
+    return res.status(200).jsonp({ message: "You have not logged in" });
   }
 });
 
@@ -121,11 +140,28 @@ router.get("/:id/elections", async (req, res) => {
         },
       ],
     });
-
-    res.json(elections);
+    for (let election of elections) {
+      delete election.dataValues.a;
+      delete election.dataValues.b;
+      delete election.dataValues.p;
+      delete election.dataValues.order;
+      delete election.dataValues.bigPx;
+      delete election.dataValues.bigPy;
+      delete election.dataValues.d;
+      delete election.dataValues.Qx;
+      delete election.dataValues.Qy;
+      delete election.dataValues.createdAt;
+      delete election.dataValues.updatedAt;
+      election.dataValues.isVoted = true;
+      if (election.dataValues.voters[0].ElectionVoter.encryptMessAx === "") {
+        election.dataValues.isVoted = false;
+      }
+      delete election.dataValues.voters;
+    }
+    return res.json(elections);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: "Internal server error" });
+    return res.status(500).json({ message: "Internal server error" });
   }
 });
 

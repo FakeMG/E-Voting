@@ -63,18 +63,18 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
     },
     maximumOfVote: {
-      type: DataTypes.INTEGER,
+      type: DataTypes.STRING,
       allowNull: false,
     },
   });
 
   Election.associate = function (models) {
-    Election.belongsToMany(models.candidate, {
-      through: "ElectionCandidate",
-      as: "candidates",
-      foreignKey: "electionId",
-    });
 
+    Election.hasOne(models.candidate, {
+      foreignKey: 'electionId',
+      onDelete: 'RESTRICT',
+      onUpdate: 'CASCADE'
+  })
     Election.belongsToMany(models.voter, {
       through: "ElectionVoter",
       as: "voters",
