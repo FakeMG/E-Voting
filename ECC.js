@@ -383,7 +383,7 @@ function generateTuple(sum, n) {
 function solve(decryptS, Ms, votes, serverFullKey) {
   let { a, b, p, q, P, Q, numberOfCandidate } = serverFullKey;
   let n = votes.length;
-  let mid = Ms.length / 2;
+  let mid = Math.floor(Ms.length / 2);
   let left = generateTuple(n, mid);
   let right = generateTuple(n, Ms.length - mid);
   let data = [];
